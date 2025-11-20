@@ -1,0 +1,47 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: hms-auth-bff
+  description: B2B Backend-for-Frontend (BFF) for the HMS Platform
+  
+  # === ANNOTATIONS: The SDLC Integration ===
+  annotations:
+    # 1. Links to the Git repo (powers CI/CD, Code Coverage, etc.)
+    github.com/project-slug: ruchithaab-byte/hms-auth-bff
+    
+    # 2. Test & Secure (SonarQube, Snyk)
+    sonarqube.org/project-key: hms-auth-bff
+    # snyk.io/project-ids: '...' # Often provisioned and added later
+    
+    # 3. Deploy (ArgoCD, Kubernetes)
+    argocd/app-name: hms-auth-bff
+    backstage.io/kubernetes-id: hms-auth-bff
+    
+    # 4. Operate (PagerDuty, Grafana)
+    pagerduty.com/service-id: hms-auth-bff # Or an integration key
+    grafana/dashboard-selector: 'app="hms-auth-bff"'
+    
+    # 5. Conditional Annotations
+    
+
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:default/guests
+  system: system:default/examples
+  
+  # === RELATIONSHIPS: The Dependency Graph ===
+  dependsOn:
+    # All services depend on ScaleKit and Postgres
+    - api:default/scalekit
+    - resource:default/postgres-bff_db
+
+    
+    
+    
+    
+    
+    
+  consumesApi:
+    - api:default/scalekit
+
