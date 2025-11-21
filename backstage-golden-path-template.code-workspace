@@ -1,0 +1,36 @@
+{
+	"folders": [
+		{
+			"path": "../backstage-golden-path-template"
+		},
+		{
+			"path": "../hms-local-dev-env"
+		},
+		{
+			"path": "../hms-platform-libraries"
+		},
+		{
+			"path": "."
+		},
+		{
+			"path": "../hms-onboarding-workflow"
+		},
+		{
+			"path": "../hms-api-contracts"
+		}
+	],
+	"settings": {
+		"java.project.resourceFilters": [
+			"skeleton"
+		],
+		"files.associations": {
+			"skeleton/**/*.java": "plaintext",
+			"skeleton/**/*.xml": "plaintext",
+			"skeleton/**/*.properties": "plaintext",
+			"skeleton/**/pom.xml": "xml"
+		},
+		"java.configuration.updateBuildConfiguration": "automatic",
+		"java.import.maven.enabled": true,
+		"java.compile.nullAnalysis.mode": "disabled"
+	}
+}

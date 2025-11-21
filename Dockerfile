@@ -1,25 +1,57 @@
 # STAGE 1: Build
-FROM maven:3.9-eclipse-temurin-17-alpine AS builder
+FROM --platform=$BUILDPLATFORM maven:3.9-eclipse-temurin-17 AS builder
 
 WORKDIR /build
 
-# Copy only pom.xml first to cache dependencies (Layer caching optimization)
+# Copy pom.xml first
 COPY pom.xml .
 
-RUN mvn dependency:go-offline
+# Copy local dependencies (common lib JAR)
+# The prepare-build-context.sh script ensures libs/ directory exists
+COPY libs/ /tmp/libs/
+
+# Install local dependencies (JAR, POM, and parent POM) and resolve all dependencies
+# This ensures the common lib and its parent are available before dependency resolution
+# BuildKit cache mount speeds up subsequent builds by caching Maven repository
+RUN --mount=type=cache,target=/root/.m2 \
+    if [ -f /tmp/libs/hms-common-lib-1.0.0-SNAPSHOT.jar ]; then \
+        echo "Installing parent POM..." && \
+        mvn install:install-file \
+            -Dfile=/tmp/libs/hms-platform-libraries-1.0.0-SNAPSHOT.pom \
+            -DgroupId=com.hms.platform \
+            -DartifactId=hms-platform-libraries \
+            -Dversion=1.0.0-SNAPSHOT \
+            -Dpackaging=pom && \
+        echo "Installing common library..." && \
+        mvn install:install-file \
+            -Dfile=/tmp/libs/hms-common-lib-1.0.0-SNAPSHOT.jar \
+            -DpomFile=/tmp/libs/hms-common-lib-1.0.0-SNAPSHOT.pom \
+            -DgroupId=com.hms.platform \
+            -DartifactId=hms-common-lib \
+            -Dversion=1.0.0-SNAPSHOT \
+            -Dpackaging=jar; \
+    fi && \
+    mvn dependency:go-offline
+
+# Copy API contracts (for OpenAPI code generation)
+# The build-local.sh script ensures api-contracts/ directory exists
+# Using a pattern that won't fail if directory is empty (Docker handles this gracefully)
+COPY api-contracts/ /build/api-contracts/
 
 # Copy source and build
 COPY src ./src
 
-RUN mvn clean package -DskipTests
+# Build with cache mount for faster builds
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn clean package -DskipTests
 
 # STAGE 2: Run (The actual 12-factor image)
-FROM eclipse-temurin:17-jre-alpine
+FROM --platform=$TARGETPLATFORM eclipse-temurin:17-jre-jammy
 
 WORKDIR /app
 
 # Create a non-root user for security
-RUN addgroup -S spring && adduser -S spring -G spring
+RUN addgroup --system spring && adduser --system --ingroup spring spring
 
 USER spring:spring
 
