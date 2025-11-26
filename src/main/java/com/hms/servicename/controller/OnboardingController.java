@@ -2,6 +2,7 @@ package com.hms.servicename.controller;
 
 import com.hms.bff.client.workflow.model.OnboardingResponse;
 import com.hms.bff.client.workflow.model.StartOnboardingRequest;
+import com.hms.lib.common.security.RequiresPermission;
 import com.hms.servicename.workflow.WorkflowServiceClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +18,7 @@ public class OnboardingController {
     }
 
     @PostMapping("/start")
+    @RequiresPermission(action = "create", resourceType = "workflow_process")
     public ResponseEntity<OnboardingResponse> startOnboarding(@RequestBody StartOnboardingRequest request) {
         OnboardingResponse response = workflowServiceClient.startOnboarding(
             request.getTenantName(),

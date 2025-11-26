@@ -1,15 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
-         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>3.2.5</version>
-        <relativePath/>
+        <relativePath />
     </parent>
 
     <groupId>com.hms</groupId>
@@ -19,7 +18,8 @@
     <description>Golden Path Base Service</description>
 
     <properties>
-        <java.version>17</java.version>
+        <java.version>21</java.version>
+        <lombok.version>1.18.32</lombok.version>
         <scalekit.version>2.0.1</scalekit.version>
         <openapi.generator.version>7.1.0</openapi.generator.version>
         <swagger.annotations.version>2.2.21</swagger.annotations.version>
@@ -52,21 +52,32 @@
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
-        
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
         </dependency>
-        
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-oauth2-client</artifactId>
         </dependency>
-        
+
         <dependency>
-            <groupId>com.scalekit</groupId>
-            <artifactId>scalekit-sdk-java</artifactId>
-            <version>${scalekit.version}</version>
+            <groupId>com.hms.platform</groupId>
+            <artifactId>hms-common-lib</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+        </dependency>
+
+        <!-- CRITICAL: Force Logback to be used - must be explicit to override ScaleKit SDK's
+        bundled SLF4J NOP -->
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
         </dependency>
 
         <dependency>
@@ -74,14 +85,24 @@
             <artifactId>hibernate-core</artifactId>
         </dependency>
 
-        
-        
-        
-
         <dependency>
-            <groupId>com.hms.platform</groupId>
-            <artifactId>hms-common-lib</artifactId>
-            <version>1.0.0-SNAPSHOT</version>
+            <groupId>com.scalekit</groupId>
+            <artifactId>scalekit-sdk-java</artifactId>
+            <version>${scalekit.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-simple</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-nop</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- Factor IX: Observability (Health Checks) -->
@@ -97,7 +118,7 @@
         </dependency>
 
         <!-- Factor VI: Distributed Sessions (BFF only) -->
-        
+
         <dependency>
             <groupId>org.springframework.session</groupId>
             <artifactId>spring-session-data-redis</artifactId>
@@ -105,6 +126,34 @@
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-openfeign</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+
+        <!-- Resilience4j for circuit breaker pattern -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-spring-boot3</artifactId>
+            <version>2.1.0</version>
+        </dependency>
+
+        <!-- Spring Retry for async Permit.io sync retry -->
+        <dependency>
+            <groupId>org.springframework.retry</groupId>
+            <artifactId>spring-retry</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-aspects</artifactId>
+        </dependency>
+
+        <!-- Lombok for entity classes -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
         </dependency>
 
         <!-- Generated API client dependencies -->
@@ -126,14 +175,88 @@
             <artifactId>swagger-annotations</artifactId>
             <version>${swagger.annotations.version}</version>
         </dependency>
-        
+
+        <!-- ScaleKit SDK - Moved to end to avoid SLF4J conflict -->
+        <dependency>
+            <groupId>com.scalekit</groupId>
+            <artifactId>scalekit-sdk-java</artifactId>
+            <version>${scalekit.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-simple</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-nop</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- Test Dependencies -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- HMS Common Lib for Kualitee Integration and Common Classes -->
+        <dependency>
+            <groupId>com.hms.platform</groupId>
+            <artifactId>hms-common-lib</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+        </dependency>
+
     </dependencies>
 
     <build>
         <plugins>
+            <!-- Maven Compiler Plugin with Java 21 + Lombok compatibility -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <source>21</source>
+                    <target>21</target>
+                    <fork>false</fork>
+                    <compilerArgs>
+                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
+                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
+                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED</arg>
+                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED</arg>
+                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED</arg>
+                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED</arg>
+                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>
+                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
+                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED</arg>
+                    </compilerArgs>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>1.18.32</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <excludeDevtools>false</excludeDevtools>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.openapitools</groupId>
@@ -146,7 +269,8 @@
                             <goal>generate</goal>
                         </goals>
                         <configuration>
-                            <inputSpec>${project.basedir}/api-contracts/openapi/workflow-service/v1/api.yaml</inputSpec>
+                            <inputSpec>
+                                ${project.basedir}/api-contracts/openapi/workflow-service/v1/api.yaml</inputSpec>
                             <generatorName>spring</generatorName>
                             <library>spring-cloud</library>
                             <apiPackage>com.hms.bff.client.workflow.api</apiPackage>
@@ -165,4 +289,3 @@
         </plugins>
     </build>
 </project>
-

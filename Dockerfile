@@ -1,5 +1,5 @@
 # STAGE 1: Build
-FROM --platform=$BUILDPLATFORM maven:3.9-eclipse-temurin-17 AS builder
+FROM --platform=$BUILDPLATFORM maven:3.9-eclipse-temurin-21 AS builder
 
 WORKDIR /build
 
@@ -15,21 +15,21 @@ COPY libs/ /tmp/libs/
 # BuildKit cache mount speeds up subsequent builds by caching Maven repository
 RUN --mount=type=cache,target=/root/.m2 \
     if [ -f /tmp/libs/hms-common-lib-1.0.0-SNAPSHOT.jar ]; then \
-        echo "Installing parent POM..." && \
-        mvn install:install-file \
-            -Dfile=/tmp/libs/hms-platform-libraries-1.0.0-SNAPSHOT.pom \
-            -DgroupId=com.hms.platform \
-            -DartifactId=hms-platform-libraries \
-            -Dversion=1.0.0-SNAPSHOT \
-            -Dpackaging=pom && \
-        echo "Installing common library..." && \
-        mvn install:install-file \
-            -Dfile=/tmp/libs/hms-common-lib-1.0.0-SNAPSHOT.jar \
-            -DpomFile=/tmp/libs/hms-common-lib-1.0.0-SNAPSHOT.pom \
-            -DgroupId=com.hms.platform \
-            -DartifactId=hms-common-lib \
-            -Dversion=1.0.0-SNAPSHOT \
-            -Dpackaging=jar; \
+    echo "Installing parent POM..." && \
+    mvn install:install-file \
+    -Dfile=/tmp/libs/hms-platform-libraries-1.0.0-SNAPSHOT.pom \
+    -DgroupId=com.hms.platform \
+    -DartifactId=hms-platform-libraries \
+    -Dversion=1.0.0-SNAPSHOT \
+    -Dpackaging=pom && \
+    echo "Installing common library..." && \
+    mvn install:install-file \
+    -Dfile=/tmp/libs/hms-common-lib-1.0.0-SNAPSHOT.jar \
+    -DpomFile=/tmp/libs/hms-common-lib-1.0.0-SNAPSHOT.pom \
+    -DgroupId=com.hms.platform \
+    -DartifactId=hms-common-lib \
+    -Dversion=1.0.0-SNAPSHOT \
+    -Dpackaging=jar; \
     fi && \
     mvn dependency:go-offline
 
@@ -46,12 +46,16 @@ RUN --mount=type=cache,target=/root/.m2 \
     mvn clean package -DskipTests
 
 # STAGE 2: Run (The actual 12-factor image)
-FROM --platform=$TARGETPLATFORM eclipse-temurin:17-jre-jammy
+FROM --platform=$TARGETPLATFORM eclipse-temurin:21-jre-jammy
 
 WORKDIR /app
 
 # Create a non-root user for security
 RUN addgroup --system spring && adduser --system --ingroup spring spring
+
+# Download OpenTelemetry Java Agent
+ADD https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar /app/opentelemetry-javaagent.jar
+RUN chmod 644 /app/opentelemetry-javaagent.jar
 
 USER spring:spring
 
@@ -62,5 +66,6 @@ COPY --from=builder /build/target/*.jar app.jar
 EXPOSE 8080
 
 # Factor XI: Stream logs to stdout (default in Spring Boot)
+# Use JAVA_TOOL_OPTIONS to attach the agent if configured
 ENTRYPOINT ["java", "-jar", "app.jar"]
 
